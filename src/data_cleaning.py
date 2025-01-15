@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Union
 
-def load_data(file_path: str) -> pd.DataFrame:
+def load_data(file_path):
     """
     Load the stroke dataset from CSV file.
     """
@@ -15,90 +15,107 @@ def load_data(file_path: str) -> pd.DataFrame:
     except pd.errors.EmptyDataError:
         raise pd.errors.EmptyDataError("The file is empty")
 
-def check_missing_values(df: pd.DataFrame) -> pd.Series:
+def check_missing_values(df):
     """
     Check for missing values in each column.
+    תזכורת- לבדוק אם בכלל בא לנו את זה
     """
     missing_percentages = (df.isnull().sum() / len(df)) * 100
     return missing_percentages[missing_percentages > 0]
 
-def create_age_groups(df: pd.DataFrame, age_column: str = 'age') -> pd.DataFrame:
+def create_age_groups(df, age_column = 'age'):
     """
     Create age groups from continuous age data.
     """
     df_with_groups = df.copy()
     
     # Define age bins and labels
-    age_bins = [0, 18, 30, 45, 60, 75, float('inf')]
-    age_labels = ['0-18', '19-30', '31-45', '46-60', '61-75', '75+']
+    age_bins = [0, 9, 18, 30, 45, 60, 75, float('inf')]
+    age_labels = ['0-9', '10-18', '19-30', '31-45', '46-60', '61-75', '75+']
     
     # Create age groups
     df_with_groups['age_group'] = pd.cut(df_with_groups[age_column], 
                                         bins=age_bins, 
-                                        labels=age_labels, 
-                                        right=False)
+                                        labels=age_labels)
     return df_with_groups
 
-def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+def handle_missing_values(df):
+   """
+   Handle missing values based on age groups and column types.
+   
+   Args:
+       df (pd.DataFrame): Input dataset
+       
+   Returns:
+       pd.DataFrame: Clean dataset without missing values
+   """
+   # Create a copy of the dataframe
+   df_clean = df.copy()
+   
+   # Step 1: Fill missing age values with mean
+   df_clean['age'].fillna(df_clean['age'].mean(), inplace=True)
+   
+   # Step 2: Create age groups
+   df_clean = create_age_groups(df_clean)
+   
+   # Step 3: Identify column types
+   binary_cols = [] #'gender', 'ever_married', 'hypertension', 'heart_disease', 'stroke'
+   numeric_cols = [] #'avg_glucose_level', 'bmi'
+   categorical_cols = [] #'work_type', 'Residence_type', 'smoking_status'
+   
+   for col in df_clean.columns:
+       if col in ['age', 'age_group']:  # Skip already handled columns
+           continue
+           
+       # Check if column is binary (has only 2 unique values)
+       if df_clean[col].nunique() == 2:
+           binary_cols.append(col)
+       # Check if column is numeric
+       elif df_clean[col].dtype in ['float64', 'int64']:
+           numeric_cols.append(col)
+       # If not numeric and not binary, it's categorical
+       else:
+           categorical_cols.append(col)
+   
+   # Step 4: Fill missing values by age group and column type
+   for group in df_clean['age_group'].unique():
+       group_data = df_clean[df_clean['age_group'] == group]
+       
+       # Handle binary columns - fill with mode (most frequent value)
+       for col in binary_cols:
+           if df_clean[col].isna().any():
+               mode_val = group_data[col].mode()[0]
+               df_clean.loc[df_clean['age_group'] == group, col].fillna(mode_val, inplace=True)
+       
+       # Handle numeric columns - fill with mean
+       for col in numeric_cols:
+           if df_clean[col].isna().any():
+               mean_val = group_data[col].mean()
+               df_clean.loc[df_clean['age_group'] == group, col].fillna(mean_val, inplace=True)
+       
+       # Handle categorical columns - fill with mode
+       for col in categorical_cols:
+           if df_clean[col].isna().any():
+               mode_val = group_data[col].mode()[0]
+               df_clean.loc[df_clean['age_group'] == group, col].fillna(mode_val, inplace=True)
+   
+   df_clean = df_clean.drop('age_group', axis=1)
+   return df_clean
+
+def remove_outliers(df, n_std = 3):
     """
-    Handle missing values in the dataset.
+    Remove outliers from numeric columns using z-score method.
     """
     df_clean = df.copy()
     
-    # Handle numeric columns - fill with median
+    # Get numeric columns and filter out those with 2 or fewer unique values
     numeric_columns = df_clean.select_dtypes(include=['float64', 'int64']).columns
-    for col in numeric_columns:
-        df_clean[col] = df_clean[col].fillna(df_clean[col].median())
+    numeric_columns = [col for col in numeric_columns if (df_clean[col].nunique() > 2)]
     
-    # Handle categorical columns - fill with mode
-    categorical_columns = df_clean.select_dtypes(include=['object']).columns
-    for col in categorical_columns:
-        df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
-    
-    return df_clean
-
-def remove_outliers(df: pd.DataFrame, columns: List[str], n_std: float = 3) -> pd.DataFrame:
-    """
-    Remove outliers using z-score method.
-    """
-    df_clean = df.copy()
-    
-    for column in columns:
-        if df_clean[column].dtype in ['float64', 'int64']:
-            # Calculate z-scores
-            z_scores = np.abs((df_clean[column] - df_clean[column].mean()) / df_clean[column].std())
-            # Keep only rows where all z-scores are below n_std
-            df_clean = df_clean[z_scores < n_std]
+    for column in numeric_columns:
+        # Calculate z-scores
+        z_scores = np.abs((df_clean[column] - df_clean[column].mean()) / df_clean[column].std())
+        # Keep only rows where z-scores are below n_std
+        df_clean = df_clean[z_scores < n_std]
     
     return df_clean
-
-# קוד ראשי לבדיקה
-if __name__ == "__main__":
-    # טען את הנתונים
-    df = load_data('brain_stroke.csv')
-    
-    # בדוק ערכים חסרים
-    missing = check_missing_values(df)
-    print("\nMissing values before cleaning:")
-    print(missing)
-    
-    # טפל בערכים חסרים
-    df_clean = handle_missing_values(df)
-    
-    # בדוק שוב ערכים חסרים
-    missing_after = check_missing_values(df_clean)
-    print("\nMissing values after cleaning:")
-    print(missing_after if not missing_after.empty else "No missing values!")
-    
-    # הסר ערכים חריגים מעמודות מספריות
-    numeric_columns = ['age', 'avg_glucose_level', 'bmi']
-    df_clean = remove_outliers(df_clean, numeric_columns)
-    print(f"\nShape after removing outliers: {df_clean.shape}")
-    
-    # צור קבוצות גיל
-    df_clean = create_age_groups(df_clean)
-    print("\nAge groups distribution:")
-    print(df_clean['age_group'].value_counts())
-    
-    print("\nColumns in cleaned dataset:")
-    print(df_clean.columns.tolist())

@@ -4,23 +4,10 @@ from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
+from scipy.stats import pointbiserialr
+from data_cleaning import create_age_groups
 
-def read_stroke_data():
-    """
-    Reads the stroke dataset from CSV file
-    
-    Returns:
-    pd.DataFrame: Stroke data DataFrame
-    """
-    try:
-        df = pd.read_csv('brain_stroke.csv')
-        print(f"Read {len(df)} rows and {len(df.columns)} columns from file")
-        return df
-    except Exception as e:
-        print(f"Error reading file: {str(e)}")
-        return None
-
-def classify_column_type(column_name, df):
+def classify_column_type (column_name, df):
     """
     Classifies a column as binary, categorical, or numerical
     
@@ -46,77 +33,98 @@ def classify_column_type(column_name, df):
         else:
             return 'categorical'
 
-def analyze_binary_column(column_name, df):
+def analyze_binary_column (column_name, df):
     """
-    Analyzes a binary column in relation to the target variable (stroke)
+    Analyzes a binary column in relation to the target variable (stroke).
     
     Parameters:
-    column_name (str): Name of the column
-    df (pd.DataFrame): DataFrame
+    column_name (str): Name of the column to analyze
+    df (pd.DataFrame): DataFrame containing the data
+    
+    Returns:
+    tuple: A tuple containing the analysis Chi-square value, p-value and DataFrame
     """
     if column_name == 'stroke':
-        print(f"Distribution of target variable {column_name}:")
-        print(df[column_name].value_counts(normalize=True) * 100)
-        return
-        
-    # Calculate distribution for each value relative to stroke
-    cross_tab = pd.crosstab(df[column_name], df['stroke'], normalize='index') * 100
-    print(f"\nDistribution of {column_name} relative to stroke (percentage):")
-    print(cross_tab)
+        target_distribution = df[column_name].value_counts(normalize=True) * 100
+        result_df = pd.DataFrame(target_distribution).reset_index().rename(
+            columns={"index": column_name, column_name: "percentage"}
+        )
+        return result_df, None, None
     
-    # Chi-square test for independence
+    # Compute the cross-tabulation (distribution relative to the target variable)
+    cross_tab = pd.crosstab(df[column_name], df['stroke'], normalize='index') * 100
+    result_df = cross_tab.reset_index().rename_axis(None, axis=1)
+    result_df.columns = [column_name, 'no_stroke_percentage', 'stroke_percentage']
+    
+    # Perform Chi-square test for independence
     chi2, p_value = stats.chi2_contingency(pd.crosstab(df[column_name], df['stroke']))[:2]
-    print(f"\nChi-square test:")
-    print(f"Chi-square value: {chi2:.2f}")
-    print(f"p-value: {p_value:.4f}")
+    
+    return chi2,p_value,result_df
 
-def analyze_categorical_column(column_name, df):
+def analyze_categorical_column (column_name, df):
     """
-    Analyzes a categorical column in relation to the target variable
+    Analyzes a categorical column in relation to the target variable (stroke).
     
     Parameters:
-    column_name (str): Name of the column
-    df (pd.DataFrame): DataFrame
-    """
-    # Category distribution
-    print(f"\nCategory distribution in {column_name}:")
-    print(df[column_name].value_counts(normalize=True) * 100)
+    column_name (str): Name of the column to analyze
+    df (pd.DataFrame): DataFrame containing the data
     
-    # Distribution relative to stroke
-    cross_tab = pd.crosstab(df[column_name], df['stroke'], normalize='index') * 100
-    print(f"\nDistribution of {column_name} relative to stroke (percentage):")
-    print(cross_tab)
-    
-    # Chi-square test
-    chi2, p_value = stats.chi2_contingency(pd.crosstab(df[column_name], df['stroke']))[:2]
-    print(f"\nChi-square test:")
-    print(f"Chi-square value: {chi2:.2f}")
-    print(f"p-value: {p_value:.4f}")
+    Returns:
+    tuple: 
+        - Chi-square value
+        - p-value
+        - DataFrame summarizing the distribution of the column relative to stroke
+        - DataFrame summarizing the overall category distribution
 
-def analyze_numerical_column(column_name, df):
     """
-    Analyzes a numerical column
+    # Calculate overall category distribution
+    category_distribution = df[column_name].value_counts(normalize=True) * 100
+    category_distribution_df = category_distribution.reset_index().rename(
+        columns={"index": column_name, column_name: "percentage"}
+    )
+    
+    # Calculate distribution relative to stroke
+    cross_tab = pd.crosstab(df[column_name], df['stroke'], normalize='index') * 100
+    relative_distribution_df = cross_tab.reset_index().rename_axis(None, axis=1)
+    relative_distribution_df.columns = [column_name, 'no_stroke_percentage', 'stroke_percentage']
+    
+    # Perform Chi-square test
+    chi2, p_value = stats.chi2_contingency(pd.crosstab(df[column_name], df['stroke']))[:2]
+    
+    return chi2,p_value,relative_distribution_df, category_distribution_df
+
+def analyze_numerical_column (column_name, df):
+    """
+    Analyzes a numerical column in relation to the target variable (stroke)
+    and computes Point-Biserial Correlation.
     
     Parameters:
-    column_name (str): Name of the column
+    column_name (str): Name of the numerical column
     df (pd.DataFrame): DataFrame
+    
+    Returns:
+    corr (float): Point-Biserial Correlation coefficient
+    p_value_corr (float): p-value for the correlation
+    stats_desc (pd.Series): Descriptive statistics for the numerical column
+    group_stats (pd.DataFrame): Descriptive statistics by stroke group
+    t_stat (float): t-statistic for group comparison
+    p_value_ttest (float): p-value for t-test
     """
     # Basic descriptive statistics
     stats_desc = df[column_name].describe()
-    print(f"\nDescriptive statistics for {column_name}:")
-    print(stats_desc)
-    
+
     # Statistics by stroke group
-    print(f"\nStatistics by stroke groups:")
-    print(df.groupby('stroke')[column_name].describe())
-    
+    group_stats = df.groupby('stroke')[column_name].describe()
+
     # T-test for group differences
     stroke_yes = df[df['stroke'] == 1][column_name]
     stroke_no = df[df['stroke'] == 0][column_name]
-    t_stat, p_value = stats.ttest_ind(stroke_yes, stroke_no)
-    print(f"\nt-test for group comparison:")
-    print(f"t-statistic: {t_stat:.2f}")
-    print(f"p-value: {p_value:.4f}")
+    t_stat, p_value_ttest = stats.ttest_ind(stroke_yes, stroke_no)
+
+    # Point-Biserial Correlation
+    corr, p_value_corr = pointbiserialr(df['stroke'], df[column_name])
+
+    return corr, p_value_corr, stats_desc, group_stats, t_stat, p_value_ttest
 
 def analyze_column(column_name, df):
     """
@@ -139,125 +147,87 @@ def analyze_column(column_name, df):
 
 def analyze_variable_importance(df):
     """
-    Analyzes the relative importance of each variable in relation to stroke
+    Analyzes the relative importance of each variable in relation to stroke by their 
+    correlation with the "stroke" variable.
     
     Parameters:
     df (pd.DataFrame): DataFrame
+
+    Returns:
+    Correlations (dict): a sorted dictionary with all of the columns' correlations
     """
-    # Create copy of data
-    df_encoded = df.copy()
-    
-    # Convert categorical variables to numerical
-    le = LabelEncoder()
-    categorical_columns = df.select_dtypes(include=['object']).columns
-    for col in categorical_columns:
-        df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
-    
     # Calculate correlations with target variable
     correlations = {}
-    for col in df_encoded.columns:
+    for col in df.columns:
         if col != 'stroke':
-            correlation = np.abs(df_encoded[col].corr(df_encoded['stroke']))
-            correlations[col] = correlation
+            analyze_tuple=analyze_column(col,df)
+            corr=analyze_tuple[0]
+            correlations[col] = corr
     
     # Sort by importance
     sorted_correlations = dict(sorted(correlations.items(), key=lambda x: x[1], reverse=True))
     
     return sorted_correlations
 
-def analyze_modifiable_vs_nonmodifiable(df):
+def analyze_modifiable_vs_nonmodifiable(corr_dict):
     """
     Compares cumulative impact of modifiable vs non-modifiable variables
     
     Parameters:
-    df (pd.DataFrame): DataFrame
+    corr_dict(dict)
+
+    Returns:
+    A tuple with the numerical variables:
+    modifiable_impact, nonmodifiable_impact, ratio
     """
-    modifiable_vars = ['avg_glucose_level', 'bmi', 'smoking_status', 'work_type']
-    nonmodifiable_vars = ['age', 'gender', 'Residence_type']
-    
-    df_encoded = df.copy()
-    le = LabelEncoder()
-    categorical_columns = df.select_dtypes(include=['object']).columns
-    for col in categorical_columns:
-        df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
+    modifiable_vars = ['avg_glucose_level', 'bmi', 'smoking_status', 'work_type', 'Residence_type']
+    nonmodifiable_vars = ['age', 'gender']
     
     # Calculate cumulative impact
-    modifiable_impact = sum([np.abs(df_encoded[col].corr(df_encoded['stroke'])) 
-                           for col in modifiable_vars if col in df_encoded.columns])
-    nonmodifiable_impact = sum([np.abs(df_encoded[col].corr(df_encoded['stroke'])) 
-                              for col in nonmodifiable_vars if col in df_encoded.columns])
+    modifiable_impact = sum(corr_dict[col] #correlation value
+                           for col in modifiable_vars)
+    nonmodifiable_impact = sum(corr_dict[col] #correlation value
+                           for col in nonmodifiable_vars)
     
-    results = {
-        'modifiable_impact': modifiable_impact,
-        'nonmodifiable_impact': nonmodifiable_impact,
-        'ratio': modifiable_impact / nonmodifiable_impact
-    }
-    
-    return results
+    ratio= modifiable_impact/nonmodifiable_impact
+    return modifiable_impact, nonmodifiable_impact, ratio
 
-def analyze_age_gender_stroke(df):
+def calculate_category_analysis(df, gender_col, category_col):
     """
-    Analyzes age impact on stroke between males and females
-    
-    Parameters:
-    df (pd.DataFrame): DataFrame
-    """
-    results = df.groupby(['gender', pd.cut(df['age'], bins=5)])['stroke'].mean()
-    return results
+    Calculate stroke analysis for a given categorical variable by gender.
 
-def analyze_heart_disease_gender_stroke(df):
-    """
-    Analyzes heart disease impact on stroke between males and females
-    
     Parameters:
-    df (pd.DataFrame): DataFrame
-    """
-    results = df.groupby(['gender', 'heart_disease'])['stroke'].mean()
-    return results
+    df (pd.DataFrame): The input DataFrame.
+    gender_col (str): Column name for gender.
+    category_col (str): Column name for the categorical variable to analyze.
 
-def analyze_hypertension_gender_stroke(df):
-    """
-    Analyzes hypertension impact on stroke between males and females
-    
-    Parameters:
-    df (pd.DataFrame): DataFrame
-    """
-    results = df.groupby(['gender', 'hypertension'])['stroke'].mean()
-    return results
-
-def analyze_numerical_correlations(df):
-    """
-    Analyzes correlations between numerical variables
-    
-    Parameters:
-    df (pd.DataFrame): DataFrame
-    
     Returns:
-    pd.DataFrame: Correlation matrix
+    pd.DataFrame: Analysis DataFrame with total cases, stroke cases, and stroke rate.
     """
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
-    correlations = df[numerical_cols].corr()
-    return correlations
+    analysis = df.groupby([gender_col, category_col]).agg({
+        'stroke': ['count', 'sum', lambda x: (x.sum() / len(x)) * 100]
+    }).round(2)
+    analysis.columns = ['total_cases', 'stroke_cases', 'stroke_rate']
+    return analysis
 
-# Usage example
-if __name__ == "__main__":
-    # Read the data
-    df = read_stroke_data()
-    
-    if df is not None:
-        # Example of analyzing a specific column
-        print("\nAnalyzing age column:")
-        analyze_column('age', df)
-        
-        # Example of analyzing variable importance
-        print("\nRelative importance of variables:")
-        importance = analyze_variable_importance(df)
-        for var, score in importance.items():
-            print(f"{var}: {score:.3f}")
-        
-        # Example of analyzing modifiable vs non-modifiable variables
-        print("\nComparing modifiable vs non-modifiable variables:")
-        impact = analyze_modifiable_vs_nonmodifiable(df)
-        print(f"Cumulative impact of modifiable variables: {impact['modifiable_impact']:.3f}")
-        print(f"Cumulative impact of non-modifiable variables: {impact['nonmodifiable_impact']:.3f}")
-        print(f"Ratio: {impact['ratio']:.3f}")
+def analyze_by_gender(df):
+    """
+    Analyze stroke statistics by gender and different categories.
+    Returns a dictionary containing DataFrames for each analysis.
+    """
+    results = {}
+
+    # Age Analysis
+    df_with_age_groups = create_age_groups(df)  # Already defined in data_cleaning.py
+    results['age'] = calculate_category_analysis(df_with_age_groups, 'gender', 'age_group')
+
+    # Smoking Status Analysis
+    results['smoking'] = calculate_category_analysis(df, 'gender', 'smoking_status')
+
+    # BMI Analysis - Convert BMI to categories first
+    df['bmi_category'] = pd.cut(df['bmi'], 
+                                bins=[0, 18.5, 24.9, 29.9, float('inf')],
+                                labels=['Underweight', 'Normal', 'Overweight', 'Obese'])
+    results['bmi'] = calculate_category_analysis(df, 'gender', 'bmi_category')
+
+    return results

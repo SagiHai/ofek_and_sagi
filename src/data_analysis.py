@@ -49,7 +49,7 @@ def analyze_binary_column (column_name, df):
         result_df = pd.DataFrame(target_distribution).reset_index().rename(
             columns={"index": column_name, column_name: "percentage"}
         )
-        return result_df, None, None
+        return None, None, result_df
     
     # Compute the cross-tabulation (distribution relative to the target variable)
     cross_tab = pd.crosstab(df[column_name], df['stroke'], normalize='index') * 100
@@ -124,9 +124,9 @@ def analyze_numerical_column (column_name, df):
     # Point-Biserial Correlation
     corr, p_value_corr = pointbiserialr(df['stroke'], df[column_name])
 
-    return corr, p_value_corr, stats_desc, group_stats, t_stat, p_value_ttest
+    return corr, p_value_corr, group_stats, stats_desc, t_stat, p_value_ttest
 
-def analyze_column(column_name, df):
+def analyze_column(column_name, df, column_type):
     """
     Main function that routes analysis based on column type
     
@@ -134,16 +134,13 @@ def analyze_column(column_name, df):
     column_name (str): Name of the column
     df (pd.DataFrame): DataFrame
     """
-    column_type = classify_column_type(column_name, df)
-    print(f"\nAnalyzing column: {column_name}")
-    print(f"Column type: {column_type}")
-    
+
     if column_type == 'binary':
-        analyze_binary_column(column_name, df)
+        return analyze_binary_column(column_name, df)
     elif column_type == 'categorical':
-        analyze_categorical_column(column_name, df)
+        return analyze_categorical_column(column_name, df)
     else:  # numerical
-        analyze_numerical_column(column_name, df)
+        return analyze_numerical_column(column_name, df)
 
 def analyze_variable_importance(df):
     """

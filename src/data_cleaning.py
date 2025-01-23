@@ -68,7 +68,8 @@ def handle_missing_values(df):
    df_clean = df.copy()
    
    # Fill missing age values with mean
-   df_clean['age'].fillna(df_clean['age'].mean(), inplace=True)
+   df_clean['age'] = df_clean['age'].fillna(df_clean['age'].mean())
+
    
    # Create age groups
    df_clean = create_age_groups(df_clean)
@@ -77,30 +78,42 @@ def handle_missing_values(df):
    numeric_cols = [] #'avg_glucose_level', 'bmi'
    categorical_cols = [] #'work_type', 'Residence_type', 'smoking_status', #'gender', 'ever_married', 'hypertension', 'heart_disease', 'stroke'
    
-   for col in df_clean.columns:
+   # Iteration only original coloumns
+   cols = df_clean.columns.tolist()
+   if 'age_group' in cols:
+       cols.remove('age_group')
+
+   for col in cols:
        column_type = classify_column_type(col, df)
-       if col in ['age', 'age_group']:# Skip already handled columns
+       if col == 'age':# Skip already handled column
            continue
        elif column_type in ['binary','categorical']:
            categorical_cols.append(col)
        else:# column_type == 'numerical'
            numeric_cols.append(col)
-           
+   
    # Fill missing values by age group and column type
    for group in df_clean['age_group'].unique():
        group_data = df_clean[df_clean['age_group'] == group]
-       
        # Handle binary and categorical columns - fill with mode (most frequent value)
        for col in categorical_cols:
            if df_clean[col].isna().any():
-               mode_val = group_data[col].mode()[0]
-               df_clean.loc[df_clean['age_group'] == group, col].fillna(mode_val, inplace=True)
+               mode_values = group_data[col].mode()
+               if len(mode_values) == 0:
+                   mode_val = df_clean[col].mode()[0] # General mode if there are no values in age group
+               else:
+                   mode_val = group_data[col].mode()[0]
+               df_clean.loc[df_clean['age_group'] == group, col] = (df_clean.loc[df_clean['age_group'] == group, col].fillna(mode_val))
        
        # Handle numeric columns - fill with mean
        for col in numeric_cols:
            if df_clean[col].isna().any():
                mean_val = group_data[col].mean()
-               df_clean.loc[df_clean['age_group'] == group, col].fillna(mean_val, inplace=True)
+               if mean_val>0 or mean_val<=0:# Not Nan
+                   pass
+               else:
+                   mean_val = df_clean[col].mean() # General mean if there are no values in age group
+               df_clean.loc[df_clean['age_group'] == group, col] = df_clean.loc[df_clean['age_group'] == group, col].fillna(mean_val)
    
    df_clean = df_clean.drop('age_group', axis=1)
    return df_clean

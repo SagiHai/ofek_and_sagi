@@ -1,12 +1,16 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')  # בחירת backend לא אינטראקטיבי
 import matplotlib.pyplot as plt
 import seaborn as sns
-from data_analysis import analyze_numerical_column
+#from data_analysis import analyze_numerical_column
 
-def plot_stroke_proportion(data, output_path="stroke_proportion_pie.png"):
+def ensure_graphs_directory_exists():
+    os.makedirs("graphs", exist_ok=True)
+
+def plot_stroke_proportion(data, output_path="graphs/stroke_proportion_pie.png"):
     """
     Visualize the proportion of stroke and non-stroke cases using a pie chart.
 
@@ -14,6 +18,7 @@ def plot_stroke_proportion(data, output_path="stroke_proportion_pie.png"):
         data (pd.DataFrame): A DataFrame containing 'stroke' and 'proportion' columns.
         output_path (str): Path to save the pie chart plot.
     """
+
     # Validate input
     if 'stroke' not in data.columns or 'proportion' not in data.columns:
         raise ValueError("Input DataFrame must contain 'stroke' and 'proportion' columns.")
@@ -41,6 +46,7 @@ def plot_categorical_analysis(df, column_name):
     df (pd.DataFrame): DataFrame with columns [category_name, no_stroke_percentage, stroke_percentage]
     column_name (str): Name of the categorical column
     """
+
     # Set style
     sns.set_theme(style="whitegrid")
     
@@ -81,7 +87,7 @@ def plot_categorical_analysis(df, column_name):
     
     # Adjust layout and save
     plt.tight_layout()
-    plt.savefig(f'stroke_distribution_by_{column_name}.png', 
+    plt.savefig(f'graphs/stroke_distribution_by_{column_name}.png', 
                 bbox_inches='tight', 
                 dpi=300)
     plt.close()
@@ -100,7 +106,7 @@ def plot_numerical_analysis(group_stats, column_name):
    # Create figure with two subplots
    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
    
-   # 1. Box Plot with additional statistics
+   # Box Plot with additional statistics
    data_to_plot = {
        'No Stroke': [group_stats.loc[0, '25%'], group_stats.loc[0, '50%'], 
                     group_stats.loc[0, '75%'], group_stats.loc[0, 'min'], 
@@ -129,7 +135,7 @@ def plot_numerical_analysis(group_stats, column_name):
    ax1.set_title(f'Box Plot of {column_name}')
    ax1.set_ylabel(f'{column_name} values')  # עדכון תווית ציר Y
    
-   # 2. Bar plot for means with error bars (std)
+   # Bar plot for means with error bars (std)
    x = np.arange(2)
    means = [group_stats.loc[0, 'mean'], group_stats.loc[1, 'mean']]
    stds = [group_stats.loc[0, 'std'], group_stats.loc[1, 'std']]
@@ -155,12 +161,12 @@ def plot_numerical_analysis(group_stats, column_name):
    
    # Adjust layout and save
    plt.tight_layout()
-   plt.savefig(f'numerical_analysis_{column_name}.png', 
+   plt.savefig(f'graphs/numerical_analysis_{column_name}.png', 
                bbox_inches='tight',
                dpi=300)
    plt.close()
 
-def plot_variable_importance(variable_importance, output_path="variable_importance_heatmap.png"):
+def plot_variable_importance(variable_importance, output_path="graphs/variable_importance_heatmap.png"):
     """
     Visualizes the variable importance using a heatmap.
 
@@ -195,7 +201,7 @@ def plot_variable_importance(variable_importance, output_path="variable_importan
     plt.savefig(output_path)
     plt.close()
 
-def plot_modifiable_vs_nonmodifiable_combined(modifiable_corr, non_modifiable_corr, ratio, output_path="modifiable_vs_nonmodifiable.png"):
+def plot_modifiable_vs_nonmodifiable_combined(modifiable_corr, non_modifiable_corr, ratio, output_path="graphs/modifiable_vs_nonmodifiable.png"):
     """
     Visualizes the correlation summary for modifiable vs. non-modifiable variables.
     Combines a bar chart (for correlations) and a text annotation (for ratio).
@@ -255,7 +261,7 @@ def plot_modifiable_vs_nonmodifiable_combined(modifiable_corr, non_modifiable_co
     plt.savefig(output_path)
     plt.close()
 
-def visualize_stroke_data_by_gender(analysis_results, output_path = 'visualize_stroke_data_by_gender.png'):
+def visualize_stroke_data_by_gender(analysis_results, output_path = 'graphs/visualize_stroke_data_by_gender.png'):
     """
     Visualize stroke data by gender for age, smoking status, and BMI categories.
 

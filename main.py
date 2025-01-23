@@ -12,6 +12,7 @@ from scipy.stats import pointbiserialr
 from data_cleaning import * 
 from data_visualization import *
 from data_analysis import *
+from model_tree import *
 
 
 def main():
@@ -28,6 +29,9 @@ def main():
 
     # Calculate correlations and variabels distribution with target variable (Stroke)
     correlations = {}
+
+    # Create a graphs folder if not exists
+    ensure_graphs_directory_exists()
 
     # Loop through all columns in the DataFrame
     for column in df.columns:
@@ -63,6 +67,11 @@ def main():
     # Analyze age, bmi and smoking status bygender
     gender_analysis_results = analyze_by_gender(df)
     visualize_stroke_data_by_gender(gender_analysis_results)
+
+    # Prediction model 
+    xy = prepare_data_for_model(df)
+    x, y = xy[0], xy[1]
+    train_and_evaluate_model(x, y, output_dir="model_output")
 
 
 if __name__ == "__main__":

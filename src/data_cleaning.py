@@ -67,6 +67,14 @@ def handle_missing_values(df):
    # Create a copy of the dataframe
    df_clean = df.copy()
    
+   df_clean = df_clean.dropna(axis=1, how='all') # Drop empty columns
+   
+   # Raise error if required, mandatory columns are missing (defined as 'age', 'stroke')
+   must_columns = ['stroke', 'age']
+   missing_columns = [col for col in must_columns if col not in df_clean.columns]
+   if missing_columns:
+       raise KeyError(f"The following required columns are missing from the DataFrame: {', '.join(missing_columns)}")
+   
    # Fill missing age values with mean
    df_clean['age'] = df_clean['age'].fillna(df_clean['age'].mean())
 

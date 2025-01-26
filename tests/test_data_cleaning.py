@@ -65,12 +65,14 @@ class TestDataCleaning(unittest.TestCase):
         """
         Test handle_missing_values function.
         - Positive Test Case: Proper filling of numerical and categorical columns.
-        - Additional Test Case: Categorical column with multiple modes, and age groups with no values.
+        - Additional Test Case: Categorical column with multiple modes, age groups with no values, null columns and existence of mandatory columns.
         """
         df = pd.DataFrame({
             'age': [25, np.nan, 35, 45, 25, np.nan, 35, 45 ,25, np.nan, 35, 45],
             'gender': ['M', 'F', np.nan, 'F','M', 'F', np.nan, 'F','M', 'F', np.nan, 'F'],
-            'bmi': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, np.nan, 11]
+            'bmi': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, np.nan, 11],
+            'smoking_status': [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
+            'stroke': [1,1,1,1,1,1,0,0,0,0,0,0]
         })
         result = handle_missing_values(df)
         
@@ -80,10 +82,20 @@ class TestDataCleaning(unittest.TestCase):
         # Ensure gender is filled with mode
         self.assertEqual(result['gender'].iloc[2], 'F')
 
+        # Ensure smoking status is dropped
+        self.assertNotIn('smoking status', df.columns)
+
+        # KeyError for missing madatory columns is raised
+        with self.assertRaises(KeyError) as context:
+            handle_missing_values(df.drop('stroke',axis=1))
+        # Ensure error context contains the missing column name
+        self.assertIn("stroke", str(context.exception))
+
         # Test case with multiple modes in categorical column, and no values in an age group
         df_with_modes = pd.DataFrame({
             'age': [25, 26, 35, 36],
-            'gender': [np.nan, np.nan, 'F','M']
+            'gender': [np.nan, np.nan, 'F','M'],
+            'stroke': [0,1,0,1]
         })
         result_with_modes = handle_missing_values(df_with_modes)
         self.assertIn(result_with_modes['gender'].iloc[2], ['M', 'F'])

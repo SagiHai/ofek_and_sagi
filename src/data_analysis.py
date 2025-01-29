@@ -140,8 +140,12 @@ def analyze_modifiable_vs_nonmodifiable(corr_dict):
     A tuple with the numerical variables:
     modifiable_impact, nonmodifiable_impact, ratio
     """
-    modifiable_vars = ['avg_glucose_level', 'bmi', 'smoking_status', 'work_type', 'Residence_type']
-    nonmodifiable_vars = ['age', 'gender', 'hypertension', 'heart_disease']
+    modifiable = ['avg_glucose_level', 'bmi', 'smoking_status', 'work_type', 'Residence_type']
+    nonmodifiable = ['age', 'gender', 'hypertension', 'heart_disease']
+
+    # Filter to remain only existing keys from corr_dict
+    modifiable_vars = [var for var in modifiable if var in corr_dict]
+    nonmodifiable_vars = [var for var in nonmodifiable if var in corr_dict]
     
     # Calculate cumulative impact
     modifiable_impact = sum(corr_dict[col] #correlation value

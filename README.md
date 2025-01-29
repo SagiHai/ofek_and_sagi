@@ -60,7 +60,7 @@ pip install virtualenv
 python -m venv venv
 
 # Activate virtual environment
-.\venv\Scripts\activate
+.\.venv\Scripts\activate
 # (venv) should appear as prefix
 
 # Update pip
@@ -77,7 +77,7 @@ pip install -e .[dev]
 
 1. Activate the virtual environment:
 ```bash
-.\venv\Scripts\activate
+.\.venv\Scripts\activate
 ```
 
 2. Run the main analysis:

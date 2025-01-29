@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stroke-prediction"
+version = "0.1.0"
+description = "Brain stroke prediction analysis and modeling"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Sagi Hai, Ofek Klein, Ariel Lange", email = "sagihai6@gmail.com, ofekte24@gmail.com, Ariel.lange289@gmail.com"}
+]
+dependencies = [
+    "pandas>=2.2.3",
+    "numpy>=2.2.1",
+    "scikit-learn>=1.6.1",
+    "matplotlib>=3.10.0",
+    "seaborn>=0.13.2",
+    "scipy>=1.15.0",
+    "imbalanced-learn"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=22.0",
+    "pylint>=2.15",
+    "mypy>=0.990"
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "C0330",  # bad-continuation
+    "C0326",  # bad-whitespace
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

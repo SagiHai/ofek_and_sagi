@@ -83,7 +83,7 @@ class TestDataCleaning(unittest.TestCase):
         self.assertEqual(result['gender'].iloc[2], 'F')
 
         # Ensure smoking status is dropped
-        self.assertNotIn('smoking status', df.columns)
+        self.assertNotIn('smoking_status', result.columns)
 
         # KeyError for missing madatory columns is raised
         with self.assertRaises(KeyError) as context:

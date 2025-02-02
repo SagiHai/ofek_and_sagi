@@ -1,11 +1,8 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy import stats
 from scipy.stats import pointbiserialr
-from data_cleaning import create_age_groups, classify_column_type
+from data_cleaning import create_age_groups
 
 def load_data(file_path):
     """

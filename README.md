@@ -15,12 +15,14 @@ Raw data file: `brain_stroke.csv` (4,981 records with 11 features)
 stroke_py_project/
 │
 ├── src/                        # Source code
+│   ├── __init__.py            # init file
 │   ├── data_analysis.py       # Statistical analysis functions
 │   ├── data_cleaning.py       # Data preprocessing functions
 │   ├── data_visualization.py  # Visualization functions
 │   └── model_tree.py         # Machine learning model implementation
 │
 ├── tests/                     # Test files
+│   ├── __init__.py            # init file
 │   ├── test_data_analysis.py
 │   ├── test_data_cleaning.py
 │   └── test_model_tree.py
